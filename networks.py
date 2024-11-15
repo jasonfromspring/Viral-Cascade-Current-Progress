@@ -7,6 +7,8 @@ import pickle as pk
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 import math
+from IPython.display import display
+
 
 def get_db_connection():
     engine = create_engine('postgresql://postgres:wapuh717@localhost:5432/Viral Cascade')
@@ -109,14 +111,15 @@ def make_net(forum):
                         X.add_edge(users[i], users[j], weight=1)
     return X
 
-def make_net_from_df(user_data, sigma):
+def make_net_from_df(user_data, sigma, alpha_time):
     
     X = nx.DiGraph()
-
+    #for topic_id, group in user_data.groupby('topic_id'):
+    #    display(group)
     for topic_id, group in user_data.groupby('topic_id'):
         # Using the first post date as the start date
         first_post_date = group['dateadded_post'].min()
-        
+        #print(first_post_date)
         # Filtering posts within the time window from the first post date
         #filtered_group = group[group['dateadded_post'] <= first_post_date + timedelta(days=time_window_days)]
         
@@ -129,7 +132,6 @@ def make_net_from_df(user_data, sigma):
         users = group['user_id'].to_numpy()
         #is this correct with matching users / times ?
         times = group['dateadded_post'].to_numpy()
-
         #print(users)
         #print(times)
 
@@ -139,28 +141,30 @@ def make_net_from_df(user_data, sigma):
             for j in np.arange(i + 1, users.size):
                 
                 #if root, then weight = 1.  we can see if it's root if delta t is 0
-                if(times[j] == first_post_date or times[i] == first_post_date):
-                    days_diff = 0
+                if times[i] == first_post_date:
+                    delta_t_VU = 0
                 else:
                     #what unit of time do i make this?
-                    delta_t_V = (times[j] - first_post_date)
-                    delta_t_U = (times[i] - first_post_date)
+                    #delta_t_V = times[j] - first_post_date
+                    #delta_t_U = times[i] - first_post_date
 
-                    difference = (delta_t_V - delta_t_U).total_seconds()
-                    days_diff = difference / (24 * 60 * 60)
+                    #difference = (delta_t_V - delta_t_U).total_seconds()
+                    delta_t_VU = (times[j]-times[i]).total_seconds()
+                    delta_t_VU = delta_t_VU / (24 * 60 * 60)
 
-                #calculate and round the weights BEFORE creating the edge
-                #if it rounds to 0,  then DO NOT CREATE / ADD the weight
-                #round up to 2 decimal places for now
+                delta_t_AV = (alpha_time - times[j]).total_seconds() / (24 * 60 * 60)
                 if users[i] != users[j]:
+                    value = round(math.e**((-(delta_t_VU))/sigma) * math.e**((-(delta_t_AV))/sigma), 2)
+                    #if value != 0:
+                    #    print(value)
                     if X.has_edge(users[i], users[j]):
-                        X[users[i]][users[j]]['weight'] += math.e**((-(days_diff))/sigma)
+                        X[users[i]][users[j]]['weight'] =  round(X[users[i]][users[j]]['weight'] + value, 2)
                     else:
-                        X.add_edge(users[i], users[j], weight= math.e**((-(days_diff))/sigma))
+                        if value != 0:
+                            X.add_edge(users[i], users[j], weight= value)
+
 
     return X
-
-    
 
 
 def save_net(N, forum_id):
@@ -187,7 +191,7 @@ def show_net(path, forum, save = False):
         fig.savefig(f"Forum{forum} Network", dpi = 500)
     return 0
 
-def visualize_network(net, forum):
+def visualize_network(net):
     '''
     with open(path, 'rb') as f:
         load = pk.load(f)

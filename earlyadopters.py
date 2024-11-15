@@ -16,8 +16,8 @@ def get_early_adopters(df, forum, alpha, beta):
     timecsc = {}
     timencsc = {}
 
-    gdf = df[["user_id", "topic_id", "post_id", "dateadded_post"]]
-    #display(gdf)
+    gdf = df[["user_id", "topic_id", "post_id", "dateadded_post"]].sort_values(by=['dateadded_post'])
+    display(gdf)
     '''
     #Final Version:
     

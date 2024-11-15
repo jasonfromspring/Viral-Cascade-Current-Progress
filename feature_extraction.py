@@ -7,6 +7,9 @@ import numpy as np
 import pickle as pk
 import datetime as dt
 import community
+from networks import make_net_from_df, visualize_network
+from IPython.display import display
+
 
 X = None
 C = None
@@ -15,11 +18,8 @@ IX = None
 PR = None
 B = None
 K = None
-
-#check the number of connected components
-#nx.number_strongly_connected_components(G)
-#nx.number_weakly_connected_components(G)
-#will decide if we normalize certain features or not
+partition = None
+P = None
 
 def test(network):
     return nx.strongly_connected_components(network)
@@ -53,6 +53,9 @@ def root_f2(root): # root user eigenvector centrality
     # we want to replace eigenvector centrality with page rank, as it is more suitable for our data
     return C[root]
 
+def root_f2_2(root): #page rank
+    return P[root]
+
 #Betweenness centrality
 def root_f3(root):
     return B[root]
@@ -81,6 +84,12 @@ def early_f2(users): # user eigenvector centrality
         sum += C[usr]
     return sum/len(users)
 
+def early_f2_2(users): #page rank
+    sum = 0
+    for usr in users:
+        sum += P[usr]
+    return sum/len(users)
+
 def early_f3(users):
     sum = 0
     for usr in users:
@@ -99,20 +108,79 @@ def early_f5(users):
         sum += K[usr]
     return sum/len(users)
 
-def early_f8(subgraph):
-    return nx.diameter(subgraph, weight='weight')
 
-def early_f9(subgraph): 
+def forward_neighbors(graph, current_n, backward_n):
+
+    foward_neighbor_weights = dict()
+
+    # Iterate over each node in the group of nodes
+    for node in current_n:
+        # Iterate over the neighbors of each node
+        for neighbor in graph.neighbors(node):
+            # Exclude the nodes in the original group
+            if neighbor not in current_n and neighbor not in backward_n:
+                # Sum the weights to each neighbor
+                if neighbor in foward_neighbor_weights:
+                    foward_neighbor_weights[neighbor] += graph[node][neighbor].get('weight')
+                else:
+                    foward_neighbor_weights[neighbor] = graph[node][neighbor].get('weight')
+
+    return foward_neighbor_weights
+
+def early_f6_f7_nexthop(users): #Average out-degree weight to 1-Hop forward neighbors (averaged by neighborhood size)
+    result = forward_neighbors(X, users, set())
+    forward_n = set(result.keys())
+    forward_n_size = len(forward_n)
+    #avg_forward_weight = np.median(list(result.values()))
+    avg_forward_weight = sum(result.values()) / forward_n_size if forward_n_size != 0 else 0
+    #print(f"Median:{avg_forward_weight}")
+    #print(f"mean:{np.mean(list(result.values()))}")
+    return avg_forward_weight, forward_n_size, forward_n
+
+
+def get_components(subgraph):
+    components = list(nx.strongly_connected_components(subgraph))
+    return components #for f8, just do len() of this value
+
+def early_f9(subgraph, components):
+    graph_order = subgraph.order()
+    diameter_score = 0
+    max_d = 0
+    for component in components:
+        sub = subgraph.subgraph(component)
+        sub_order = sub.order()
+        result = nx.diameter(sub, weight='weight')
+        if result > max_d:
+            max_d = result
+        #print(f"{result} / {sub_order / graph_order} = {result / (sub_order / graph_order) if result != 0 else 1}")
+        diameter_score += result / (sub_order / graph_order) if result != 0 else 1
+    #return diameter_score, max_d
+    return max_d
+
+
+def early_f10(subgraph): 
     return nx.density(subgraph) 
 
-def early_f10(subgraph):
-    return nx.average_shortest_path_length(subgraph, weight='weight') 
+def early_f11(subgraph, components):
+    graph_order = subgraph.order()
+    aspl_score = 0
+    max_aspl = 0
+    for component in components:
+        sub = subgraph.subgraph(component)
+        sub_order = sub.order()
+        result = nx.average_shortest_path_length(sub, weight='weight')
+        if result > max_aspl:
+            max_aspl = result
+        #print(f"{result} / {sub_order / graph_order} = {result / (sub_order / graph_order) if result != 0 else 1}")
+        aspl_score += result / (sub_order / graph_order) if result != 0 else 1
+    #return aspl_score, max_aspl
+    return max_aspl
 
-def early_f11(subgraph):
-    return nx.clustering(subgraph, weight='weight')
-    #there is an average clustering networkx function, should we use that instead?
+def early_f12(subgraph):
+    return nx.average_clustering(subgraph, weight='weight')
+    #use X or a subgraph of users?
 
-def early_f12(users): #hub count
+def early_f13(users): #hub count
     #not sure how to implement this, used chatgpt for a base
     degree_centrality = nx.degree_centrality(X)
     subset_centrality = {node: degree_centrality[node] for node in users if node in degree_centrality}
@@ -122,29 +190,36 @@ def early_f12(users): #hub count
     hubs = {node: score for node, score in subset_centrality.items() if score > hub_threshold}
     return len(hubs)
 
-def gini_impurity(sizes): #gini impurity
-    n = sum(sizes)
-    if n==0: return 0
-    return 1 - sum((size / n) ** 2 for size in sizes)
+def gini_impurity(intersection, size): #gini impurity
+    if size==0: return 0
+    return 1 - sum((x / size) ** 2 for x in intersection)
 
-def early_f13_14_15(users, one_hop):     # num of communities, gini impurity
+def early_f14_15_16(users, one_hop):     # num of communities, gini impurity
     #might need some review 
     # make subgraph
-    S = UX.subgraph(users) # undirected
-    partition = community.best_partition(S, weight='weight', random_state=40)
-    j = len([users for _, users in partition.items() if users != 0])
+    #S = UX.subgraph(users) # undirected
+    # j = len([users for _, users in partition.items() if users != 0])
+    j = len(set([comm for node, comm in partition.items() if node in users]))
     #modularity = community.modularity(partition, S, weight='weight')
 
-    gini = early_community_gini(partition)
+    gini = early_community_gini(partition, users)
     shared = early_community_shared(partition, users, one_hop)
-    return j, gini, shared
+    return j, gini, len(shared)
 
-def early_community_gini(partition): #gini impurity of the communities
+def early_community_gini(partition, users): #gini impurity of the communities
     community_sizes = {}
     for node, comm in partition.items():
-        community_sizes[comm] = community_sizes.get(comm, 0) + 1
+        if node in users:
+            community_sizes[comm] = community_sizes.get(comm, 0) + 1
+        # if comm in community_sizes.keys():
+        #     community_sizes[comm]['total'] = community_sizes[comm]['total'] + 1
+        # else:
+        #     community_sizes[comm] = {'total': 1, 'users': 0}
+        # if node in users:
+        #     community_sizes[comm]['users'] = community_sizes[comm]['users'] + 1
+
     sizes = list(community_sizes.values())
-    return gini_impurity(sizes)
+    return gini_impurity(sizes, len(users))
 
 def early_community_shared(partition, early_adopt, one_hop): #shared communities with 1 hop adopters
     early_adopter_communities = set()
@@ -163,14 +238,14 @@ def early_community_shared(partition, early_adopt, one_hop): #shared communities
     return early_adopter_communities.intersection(one_hop_frontier_communities)
 
 
-def early_f16(times): # average time to adoption
+def early_f17(times): # average time to adoption
     sum = dt.timedelta(days=0)
     for i in range(len(times)-1):
         sum = sum + times[i+1] - times[i] 
     return round(sum.total_seconds()/(60*(len(times)-1)),2) # avg and in minutes
 
 #def early_alpha_time():
-def early_f17(pst_tm): # time elapsed
+def early_f18(pst_tm): # time elapsed
     elapsed = pst_tm[-1] - pst_tm[0]
     return round(elapsed.total_seconds()/60,2)
 
@@ -248,18 +323,19 @@ def get_communities(users): # num of communities, modularity
 
 def make_subgraph(G, users):
     H = G.subgraph(users)
-    pos = nx.spring_layout(H, scale=30, k=7/np.sqrt(H.order()))
-    nx.draw(H, pos, node_color='red', 
-    with_labels=True)
-    plt.show()
+    #pos = nx.spring_layout(H, scale=30, k=7/np.sqrt(H.order()))
+    #nx.draw(H, pos, node_color='red', 
+    #with_labels=True)
+    #plt.show()
     return H
 
 #get_features(train_threads, train_times, get_net(pkp))
-def get_features(threads, times, network):
+
+def get_features(threads, times, df, sigma):
     data = [] # topic_id f1, f2, f3, f4, yes
-    
+    '''
     global X    
-    X = network # entire network
+    #X = make_net_from_df(df) # entire network
     
     global UX
     UX = X.to_undirected()
@@ -269,8 +345,10 @@ def get_features(threads, times, network):
     for u,v,d in IX.edges(data=True):
         d['weight'] = 1/d['weight']
 
+    global partition
+    partition = community.best_partition(UX, weight='weight', random_state=40)
+
     
-    '''
     strongs = list(test(X))
     for i, x in enumerate(strongs):
         print(i, len(x))
@@ -285,9 +363,12 @@ def get_features(threads, times, network):
     testval = test2(X)
     for component in testval:
         print(component)
-    '''
+    
+    
     global C 
-    C = nx.eigenvector_centrality_numpy(X.reverse(), weight='weight') 
+    #C = nx.eigenvector_centrality_numpy(X.reverse(), weight='weight') 
+    C = nx.pagerank(X.reverse(), weight='weight')
+
     # centrality of all nodes
     # have to reverse graph for out-edges eigenvector centrality
 
@@ -296,9 +377,11 @@ def get_features(threads, times, network):
 
     global K
     K = nx.core_number(X)
+    
 
-    '''global PR 
-    PR = nx.pagerank_numpy(X, alpha=0.9, weight = 'weight')'''
+    global PR 
+    PR = nx.pagerank_numpy(X, alpha=0.9, weight = 'weight')
+    '''
     
     #keyerror = pos
     csc = threads['Pos']
@@ -308,91 +391,159 @@ def get_features(threads, times, network):
 
     print('Doing Yes Cases')
     for key, users in csc.items():
-        #original code said doing "forum" instead of "thread", may be a mistake?
         print(f'Doing Thread {key}')
+        print(users)
+
+        alpha_time = tmcsc[key][-1]
+        print(alpha_time)
+        alpha_dataframe = df[df['dateadded_post'] <= alpha_time]
+        #display(alpha_dataframe)
+        
+        global X
+        X = make_net_from_df(alpha_dataframe, sigma, alpha_time)
+        #visualize_network(X)
+        global UX
+        UX = X.to_undirected()
+
+        global IX
+        IX = X.copy()
+        for u,v,d in IX.edges(data=True):
+            d['weight'] = 1/d['weight']
+
+        global partition
+        partition = community.best_partition(UX, weight='weight', random_state=40)
+
+        global C 
+        C = nx.eigenvector_centrality_numpy(X.reverse(), weight='weight') 
+        
+        global P
+        P = nx.pagerank(X.reverse(), weight='weight')
+
+        # centrality of all nodes
+        # have to reverse graph for out-edges eigenvector centrality
+
+        global B 
+        B = nx.betweenness_centrality(IX, weight='weight')
+
+        global K
+        K = nx.core_number(X)
+
         root = users[0]
-        f1 = root_f1(root)
-        f2 = root_f2(root)
-        f3 = root_f3(root)
-        f4 = root_f4(root)
-        f5 = root_f5(root)
+ 
+        rf1 = root_f1(root)
+        rf2 = root_f2(root)
+        rf2_2 = root_f2_2(root)
+        rf3 = root_f3(root)
+        rf4 = root_f4(root)
+        rf5 = root_f5(root)
  
          #centrality
         ef1 = early_f1(users)
         ef2 = early_f2(users)
+        ef2_2 = early_f2_2(users)
         ef3 = early_f3(users)
         ef4 = early_f4(users)
         ef5 = early_f5(users)
 
         #forward-connectivity
-        #ef6 = early_f6(early_adopters)
-        #ef7 = early_f7(early_adopters)
+        ef6, ef7, one_hop = early_f6_f7_nexthop(users)
 
         #network-based
         early_subgraph = make_subgraph(X, users)
         early_subgraph_inverse = make_subgraph(IX, users)
-        ef8 = early_f8(early_subgraph_inverse) 
-        ef9 = early_f9(early_subgraph)
-        ef10 = early_f10(early_subgraph_inverse) 
-        ef11 = early_f11(early_subgraph)
+        early_components = get_components(early_subgraph_inverse) #inverse or not? does it matter?
+        ef8 = len(early_components)
+        ef9 = early_f9(early_subgraph_inverse, early_components) 
+        ef10 = early_f10(early_subgraph)
+        ef11 = early_f11(early_subgraph_inverse, early_components) 
+        
         ef12 = early_f12(early_subgraph)
+        ef13 = early_f13(users)
+        #print(ef12)
+        #print(ef13)
 
         #community
-        #ef13, ef14, ef15 = early_f13_14_15(users, one_hop) 
+        ef14, ef15, ef16 = early_f14_15_16(users, one_hop) 
 
         #temporal
-        ef16 = early_f16(tmcsc[key])
         ef17 = early_f17(tmcsc[key])
+        ef18 = early_f18(tmcsc[key])
 
-
-        data.append([f'Topic{key}',f1,f2,f3,f4,f5, ef1, ef2, ef3, ef4, ef5, ef8, ef9, ef10, ef11, ef12, ef16, ef17, 1]) # topic_id f1, f2, f3, f4... yes
-        #make_subgraph(value)
-
+        data.append([f'Topic{key}',rf1,rf2,rf2_2,rf3,rf4,rf5, ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 1]) # topic_id f1, f2, f3, f4... yes
 
     print('Doing No Cases')
     for key, users in ncsc.items():
-        #same ? as csc
         print(f'Doing Thread {key}')
+        print(users)
+        alpha_time = tmncsc[key][-1]
+        print(alpha_time)
+        alpha_dataframe = df[df['dateadded_post'] <= alpha_time]
+        #display(alpha_dataframe)
+        X = make_net_from_df(alpha_dataframe, sigma, alpha_time)
+
+        UX = X.to_undirected()
+
+        IX = X.copy()
+        for u,v,d in IX.edges(data=True):
+            d['weight'] = 1/d['weight']
+
+        partition = community.best_partition(UX, weight='weight', random_state=40)
+
+        C = nx.eigenvector_centrality_numpy(X.reverse(), weight='weight') 
+        
+        P = nx.pagerank(X.reverse(), weight='weight')
+
+        # centrality of all nodes
+        # have to reverse graph for out-edges eigenvector centrality
+
+        B = nx.betweenness_centrality(IX, weight='weight')
+
+        K = nx.core_number(X)
+
 
         root = users[0]
-        f1 = root_f1(root)
-        f2 = root_f2(root)
-        f3 = root_f3(root)
-        f4 = root_f4(root)
-        f5 = root_f5(root)
+        rf1 = root_f1(root)
+        rf2 = root_f2(root)
+        rf2_2 = root_f2_2(root)
+        rf3 = root_f3(root)
+        rf4 = root_f4(root)
+        rf5 = root_f5(root)
  
          #centrality
         ef1 = early_f1(users)
         ef2 = early_f2(users)
+        ef2_2 = early_f2_2(users)
         ef3 = early_f3(users)
         ef4 = early_f4(users)
         ef5 = early_f5(users)
 
         #forward-connectivity
-        #ef6 = early_f6(early_adopters)
-        #ef7 = early_f7(early_adopters)
+        ef6, ef7, one_hop = early_f6_f7_nexthop(users)
 
         #network-based
         early_subgraph = make_subgraph(X, users)
         early_subgraph_inverse = make_subgraph(IX, users)
-        ef8 = early_f8(early_subgraph_inverse) 
-        ef9 = early_f9(early_subgraph)
-        ef10 = early_f10(early_subgraph_inverse) 
-        ef11 = early_f11(early_subgraph)
+        early_components = get_components(early_subgraph_inverse) #inverse or not? does it matter?
+        ef8 = len(early_components)
+        ef9 = early_f9(early_subgraph_inverse, early_components) 
+        ef10 = early_f10(early_subgraph)
+        ef11 = early_f11(early_subgraph_inverse, early_components) 
         ef12 = early_f12(early_subgraph)
+        ef13 = early_f13(early_subgraph)
 
         #community
-        #ef13, ef14, ef15 = early_f13_14_15(users, one_hop) 
+        ef14, ef15, ef16 = early_f14_15_16(users, one_hop) 
 
         #temporal
-        ef16 = early_f16(tmcsc[key])
-        ef17 = early_f17(tmcsc[key])
+        ef17 = early_f17(tmncsc[key])
+        ef18 = early_f18(tmncsc[key])
 
 
-        data.append([f'Topic{key}',f1,f2,f3,f4,f5, ef1, ef2, ef3, ef4, ef5, ef8, ef9, ef10, ef11, ef12, ef16, ef17, 0]) # topic_id f1, f2, f3, f4... yes
+        data.append([f'Topic{key}',rf1,rf2,rf2_2,rf3,rf4,rf5, ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 0]) # topic_id f1, f2, f3, f4... no
+    
 
-    pdf = pd.DataFrame(data, columns=['Topic', 'F1', 'F2', 'F3', 'F4', 'F5', 'EF1', 'EF2', 'EF3,' 'EF4', 'EF5,' 'EF8',
-                                        'EF9', 'EF10', 'EF11', 'EF12', 'EF16', 'EF17' 'Class'])
+    pdf = pd.DataFrame(data, columns=['Topic', 'RF1', 'RF2', 'RF2.2', 'RF3', 'RF4', 'RF5', 'EF1', 'EF2', 'EF2.2', 'EF3', 'EF4', 'EF5', 'EF6', 'EF7', 'EF8',
+                                        'EF9', 'EF10', 'EF11', 'EF12', 'EF13', 'EF14', 'EF15', 'EF16', 'EF17', 'EF18', 'Class'])
     return pdf
 
 
