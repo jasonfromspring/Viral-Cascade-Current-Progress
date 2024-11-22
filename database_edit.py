@@ -16,7 +16,7 @@ from IPython.display import display
 
 
 engine = get_db_connection_to_upload()
-query = "SELECT * FROM features"
+query = "SELECT * FROM features_onehop_test"
 with engine.connect() as conn:
     df = pd.read_sql(
         sql=query,

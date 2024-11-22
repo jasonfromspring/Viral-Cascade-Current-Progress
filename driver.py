@@ -1,28 +1,35 @@
 
 import pandas as pd
 import networkx as nx
-from networks import make_net, make_net_from_df, save_net, get_net, extract_forum_data, show_net, visualize_network, filter_length, filter_users, upload_to_database
+from networks import make_net, make_net_from_df, save_net, get_net, extract_forum_data, show_net, visualize_network, filter_length, filter_users, upload_to_database, get_roots
 from earlyadopters import get_early_adopters
-from feature_extraction import get_features, test, test2
+from feature_extraction import get_features
 from tests import get_avg_time_difference, average_time_everything
 from balance import prepare
 from datetime import datetime, timedelta
 from IPython.display import display
 import datetime as dt
+import community
 
 
 alpha_values = [10, 20, 30, 40, 50]
 beta_multipliers = [2, 3, 4, 5, 10]
-content_length_thresholds = [0, 2, 10]
-min_posts_values = [1, 5, 10]
-min_threads_values = [1, 2, 5]
-sigmas = [7, 14, 30]
+content_length_thresholds = [2, 10]
+min_posts_values = [5, 10]
+min_threads_values = [2, 5]
+sigmas = [7, 14]
 forums = [4,8,2,9,11]
-
+deltaT = [30, 60, 90]
 
 #temporary:
-sigmas = [30]
-beta_multipliers = [3, 4, 5, 10]
+alpha_values = [10]
+beta_multipliers = [4]
+content_length_thresholds = [10]
+min_posts_values = [5]
+min_threads_values = [2]
+sigmas = [7]
+forums = [4]
+
 """
 alpha_values = [10]
 beta_multipliers = [4]
@@ -45,8 +52,9 @@ for forum in forums:
             for minThreads in min_threads_values:
                 print(f'User thread minimum: {minThreads}')
                 
-                df = extract_forum_data(forum, minLength)
-                df = filter_length(df, minLength)
+                forum_df = extract_forum_data(forum, minLength)
+                root_users = get_roots(forum_df)
+                df = filter_length(forum_df, minLength)
                 df = filter_users(df, minPosts, minThreads)
                 df = df.sort_values(by=['dateadded_post'])
 
@@ -56,18 +64,18 @@ for forum in forums:
                     for m in beta_multipliers:
                         print(f'Beta multiplier {m}, beta = {alpha*m}')
 
-                        csc, ncsc, tcsc, tncsc = get_early_adopters(df, forum, alpha, alpha*m)
-
+                        csc, ncsc, tcsc, tncsc, tbcsc = get_early_adopters(df, forum, alpha, alpha*m, root_users)
+                        
                         for sigma in sigmas:
                             print(f"Sigma = {sigma}\n")
                             filters = [forum, alpha, alpha*m, minLength, minPosts, minThreads]
-                            results = get_features(csc, ncsc, tcsc, tncsc, df, sigma, filters)
+                            results = get_features(csc, ncsc, tcsc, tncsc, tbcsc, df, sigma, filters)
                             #results.to_csv(f'Forum{forum}data_{m}x.csv', header = True, index = False)
-                            upload_to_database(results, 'features')
+                            upload_to_database(results, 'features_big_test')
 
-                        sigmas = [7, 14, 30]
+                        #sigmas = [7, 14, 30]
 
-                    beta_multipliers = [2, 3, 4, 5, 10]
+                    #beta_multipliers = [2, 3, 4, 5, 10]
                     
 '''
 for alpha in alpha_values:

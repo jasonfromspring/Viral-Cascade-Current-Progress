@@ -21,29 +21,6 @@ K = None
 partition = None
 P = None
 
-def test(network):
-    return nx.strongly_connected_components(network)
-
-def test2(network):
-    return nx.weakly_connected_components(network)
-
-def remove_small_components(G, min_size):
-    # Find all connected components
-    connected_components = list(nx.strongly_connected_components(G))
-
-    # Create a new graph to store large components
-    large_components_graph = nx.Graph()
-
-    # Add nodes and edges from components larger than min_size
-    for component in connected_components:
-        if len(component) >= min_size:
-            large_components_graph.add_nodes_from(component)
-            # Add edges between nodes in the same component
-            subgraph = G.subgraph(component)
-            for u, v in subgraph.edges():
-                large_components_graph.add_edge(u, v)
-
-    return large_components_graph
 
 #INNOVATOR FEATURES
 def root_f1(root): # root user out_degree centrality / 
@@ -249,78 +226,6 @@ def early_f18(pst_tm): # time elapsed
     elapsed = pst_tm[-1] - pst_tm[0]
     return round(elapsed.total_seconds()/(60*60*24),2)
 
-#...
-
-#Old Dhanush Functions that are not used for now:
-'''
-def get_f1(users): # sum of number of neighbors
-    sum = 0
-    for usr in users:
-        sum += len(list(X.neighbors(usr)))
-    #return sum/len(users)
-    return sum
-
-def get_f2(root): # NAN for root
-    #probably not included because we have out-degree centrality already
-    return len(list(X.neighbors(root)))
-
-def get_f4(pst_tm): # time elapsed
-    elapsed = pst_tm[-1] - pst_tm[0]
-    return round(elapsed.total_seconds()/60,2)
-
-def get_f5(root): # root user degree centrality --> edges/neighbors
-    return nx.degree_centrality(X)[root]
-
-def get_f8(root): # cumulative weight of out degree edges
-    return X.out_degree(weight = 'weight')[root]
-
-def get_f9(users): # average cumulative weight of out_degree edges
-    sum = 0
-    for usr in users:
-        sum += X.out_degree(weight = 'weight')[usr]
-    return sum/len(users)
-
-def get_f10(root): # root user pagerank --> importance ranking
-    return PR[root]
-
-def get_f11(users): # average page rank
-    sum = 0
-    for usr in users:
-        sum += PR[usr]
-    return sum/len(users)
-
-#how are the group functions different the other ones? understand these group functions
-
-def get_f12(users): # group out degree centrality
-    return nx.group_out_degree_centrality(X, users)
-
-def get_f13(users): # group_betweenness centrality
-    return nx.group_betweenness_centrality(X, users, normalized=True, weight='weight')
-
-def get_f14(users): # group closeness centrality - measure of how close the group is to the other nodes in the graph.
-    return nx.group_closeness_centrality(X, users, weight='weight')
-
-def get_f15(times): # average time to adoption
-    sum = dt.timedelta(days=0)
-    for i in range(len(times)-1):
-        sum = sum + times[i+1] - times[i] 
-    return round(sum.total_seconds()/(60*(len(times)-1)),2) # avg and in minutes
-
-def get_f5(users): # gini coeffient https://stackoverflow.com/questions/39512260/calculating-gini-coefficient-in-python-numpy
-    return sum/len(users)
-
-def get_f6(users): # louveine https://python-louvain.readthedocs.io/en/latest/
-    return sum/len(users)
-
-def get_communities(users): # num of communities, modularity
-    # make subgraph
-    S = UX.subgraph(users) # undirected
-    lp = community.best_partition(S, weight='weight', random_state=40)
-    j = len([users for _, users in lp.items() if users != 0])
-    mod = community.modularity(lp, S, weight='weight')
-    return j, mod
-'''
-
 def make_subgraph(G, users):
     H = G.subgraph(users)
     #pos = nx.spring_layout(H, scale=30, k=7/np.sqrt(H.order()))
@@ -331,7 +236,7 @@ def make_subgraph(G, users):
 
 #get_features(train_threads, train_times, get_net(pkp))
 
-def get_features(csc, ncsc, tmcsc, tmncsc, df, sigma, filters):
+def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
     data = [] # topic_id f1, f2, f3, f4, yes
     forumNum = filters[0]
     alpha = filters[1]
@@ -339,61 +244,6 @@ def get_features(csc, ncsc, tmcsc, tmncsc, df, sigma, filters):
     minLength = filters[3]
     minPosts = filters[4]
     minThreads = filters[5]
-    '''
-    global X    
-    #X = make_net_from_df(df) # entire network
-    
-    global UX
-    UX = X.to_undirected()
-
-    global IX
-    IX = X.copy()
-    for u,v,d in IX.edges(data=True):
-        d['weight'] = 1/d['weight']
-
-    global partition
-    partition = community.best_partition(UX, weight='weight', random_state=40)
-
-    
-    strongs = list(test(X))
-    for i, x in enumerate(strongs):
-        print(i, len(x))
-    X = remove_small_components(X, 5)
-    strongs = list(nx.connected_components(X))
-    for i, x in enumerate(strongs):
-        print(i, len(x))   
-    
-    testval = test(X)
-    for component in testval:
-        print(component)
-    testval = test2(X)
-    for component in testval:
-        print(component)
-    
-    
-    global C 
-    #C = nx.eigenvector_centrality_numpy(X.reverse(), weight='weight') 
-    C = nx.pagerank(X.reverse(), weight='weight')
-
-    # centrality of all nodes
-    # have to reverse graph for out-edges eigenvector centrality
-
-    global B 
-    B = nx.betweenness_centrality(IX, weight='weight')
-
-    global K
-    K = nx.core_number(X)
-    
-
-    global PR 
-    PR = nx.pagerank_numpy(X, alpha=0.9, weight = 'weight')
-    '''
-    
-    #keyerror = pos
-    #csc = threads['Pos']
-    #ncsc = threads['Neg']
-    #tmcsc = times['Pos']
-    #tmncsc = times['Neg']
 
     print('Doing Yes Cases')
     for key, users in csc.items():
@@ -433,6 +283,9 @@ def get_features(csc, ncsc, tmcsc, tmncsc, df, sigma, filters):
 
         global K
         K = nx.core_number(X)
+        
+        deltaT = tmbcsc[key] - tmcsc[key][-1]
+        deltaT = round(deltaT.total_seconds()/(60*60*24),2)
 
         root = users[0]
  
@@ -443,7 +296,7 @@ def get_features(csc, ncsc, tmcsc, tmncsc, df, sigma, filters):
         rf4 = root_f4(root)
         rf5 = root_f5(root)
  
-         #centrality
+        #centrality
         ef1 = early_f1(users)
         ef2 = early_f2(users)
         ef2_2 = early_f2_2(users)
@@ -475,7 +328,76 @@ def get_features(csc, ncsc, tmcsc, tmncsc, df, sigma, filters):
         ef17 = early_f17(tmcsc[key])
         ef18 = early_f18(tmcsc[key])
 
-        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma, rf1,rf2,rf2_2,rf3,rf4,rf5, ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 1]) # topic_id f1, f2, f3, f4... no
+
+        #ONE HOPS
+        if len(one_hop) == 0:
+            of1 = of2 = of2_2 = of3 = of4 = of5 = of6 = of7 = of8 = of9 = of10 = of11 = of12 = of13 = of14 = of15 = of16 = 0
+            tf1 = tf2 = tf2_2 = tf3 = tf4 = tf5 = tf6 = tf7 = tf8 = tf9 = tf10 = tf11 = tf12 = tf13 = tf14 = tf15 = tf16 = 0
+            two_hop = []
+        else:
+            #centrality
+            of1 = early_f1(one_hop)
+            of2 = early_f2(one_hop)
+            of2_2 = early_f2_2(one_hop)
+            of3 = early_f3(one_hop)
+            of4 = early_f4(one_hop)
+            of5 = early_f5(one_hop)
+
+            #forward-connectivity
+            of6, of7, two_hop = early_f6_f7_nexthop(one_hop)
+
+            #network-based
+            onehop_subgraph = make_subgraph(X, one_hop)
+            onehop_subgraph_inverse = make_subgraph(IX, one_hop)
+            onehop_components = get_components(onehop_subgraph_inverse) #inverse or not? does it matter?
+            of8 = len(onehop_components)
+            of9 = early_f9(onehop_subgraph_inverse, onehop_components) 
+            of10 = early_f10(onehop_subgraph)
+            of11 = early_f11(onehop_subgraph_inverse, onehop_components) 
+            
+            of12 = early_f12(onehop_subgraph)
+            of13 = early_f13(one_hop)
+
+            #community
+            of14, of15, of16 = early_f14_15_16(one_hop, two_hop) 
+
+        if len(two_hop) == 0:
+            tf1 = tf2 = tf2_2 = tf3 = tf4 = tf5 = tf6 = tf7 = tf8 = tf9 = tf10 = tf11 = tf12 = tf13 = tf14 = tf15 = tf16 = 0
+        else:
+            #centrality
+            tf1 = early_f1(two_hop)
+            tf2 = early_f2(two_hop)
+            tf2_2 = early_f2_2(two_hop)
+            tf3 = early_f3(two_hop)
+            tf4 = early_f4(two_hop)
+            tf5 = early_f5(two_hop)
+
+            #forward-connectivity
+            tf6, tf7, three_hop = early_f6_f7_nexthop(two_hop)
+
+            #network-based
+            twohop_subgraph = make_subgraph(X, two_hop)
+            twohop_subgraph_inverse = make_subgraph(IX, two_hop)
+            twohop_components = get_components(twohop_subgraph_inverse) #inverse or not? does it matter?
+            tf8 = len(twohop_components)
+            tf9 = early_f9(twohop_subgraph_inverse, twohop_components) 
+            tf10 = early_f10(twohop_subgraph)
+            tf11 = early_f11(twohop_subgraph_inverse, twohop_components) 
+            
+            tf12 = early_f12(twohop_subgraph)
+            tf13 = early_f13(two_hop)
+
+            #community
+            tf14, tf15, tf16 = early_f14_15_16(two_hop, three_hop) 
+
+
+
+        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma,deltaT,
+                     rf1,rf2,rf2_2,rf3,rf4,rf5, 
+                     ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 
+                     of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16,
+                     tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16, 
+                     1]) # topic_id f1, f2, f3, f4... no
 
     print('Doing No Cases')
     for key, users in ncsc.items():
@@ -506,6 +428,7 @@ def get_features(csc, ncsc, tmcsc, tmncsc, df, sigma, filters):
 
         K = nx.core_number(X)
 
+        deltaT = -1
 
         root = users[0]
         rf1 = root_f1(root)
@@ -545,13 +468,83 @@ def get_features(csc, ncsc, tmcsc, tmncsc, df, sigma, filters):
         ef18 = early_f18(tmncsc[key])
 
 
-        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma, rf1,rf2,rf2_2,rf3,rf4,rf5, ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 0]) # topic_id f1, f2, f3, f4... no
+        #ONE HOPS
+        if len(one_hop) == 0:
+            of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16 = 0
+            tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16 = 0
+            two_hop = []
+        else:
+            #centrality
+            of1 = early_f1(one_hop)
+            of2 = early_f2(one_hop)
+            of2_2 = early_f2_2(one_hop)
+            of3 = early_f3(one_hop)
+            of4 = early_f4(one_hop)
+            of5 = early_f5(one_hop)
+
+            #forward-connectivity
+            of6, of7, two_hop = early_f6_f7_nexthop(one_hop)
+
+            #network-based
+            onehop_subgraph = make_subgraph(X, one_hop)
+            onehop_subgraph_inverse = make_subgraph(IX, one_hop)
+            onehop_components = get_components(onehop_subgraph_inverse) #inverse or not? does it matter?
+            of8 = len(onehop_components)
+            of9 = early_f9(onehop_subgraph_inverse, onehop_components) 
+            of10 = early_f10(onehop_subgraph)
+            of11 = early_f11(onehop_subgraph_inverse, onehop_components) 
+            
+            of12 = early_f12(onehop_subgraph)
+            of13 = early_f13(one_hop)
+
+            #community
+            of14, of15, of16 = early_f14_15_16(one_hop, two_hop) 
+
+        if len(two_hop) == 0:
+            tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16 = 0
+
+        else:
+            #centrality
+            tf1 = early_f1(two_hop)
+            tf2 = early_f2(two_hop)
+            tf2_2 = early_f2_2(two_hop)
+            tf3 = early_f3(two_hop)
+            tf4 = early_f4(two_hop)
+            tf5 = early_f5(two_hop)
+
+            #forward-connectivity
+            tf6, tf7, three_hop = early_f6_f7_nexthop(two_hop)
+
+            #network-based
+            twohop_subgraph = make_subgraph(X, two_hop)
+            twohop_subgraph_inverse = make_subgraph(IX, two_hop)
+            twohop_components = get_components(twohop_subgraph_inverse) #inverse or not? does it matter?
+            tf8 = len(twohop_components)
+            tf9 = early_f9(twohop_subgraph_inverse, twohop_components) 
+            tf10 = early_f10(twohop_subgraph)
+            tf11 = early_f11(twohop_subgraph_inverse, twohop_components) 
+            
+            tf12 = early_f12(twohop_subgraph)
+            tf13 = early_f13(two_hop)
+
+            #community
+            tf14, tf15, tf16 = early_f14_15_16(two_hop, three_hop) 
+
+
+        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma,deltaT, 
+                     rf1,rf2,rf2_2,rf3,rf4,rf5, 
+                     ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 
+                     of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16,
+                     tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16, 
+                     0]) # topic_id f1, f2, f3, f4... no
 
     pdf = pd.DataFrame(data, columns=['Topic', 'Forum', 'Alpha', 'Beta', 'Min Post Content Length',
-                                      'Min User Post Count', 'Min User Thread Count', 'Sigma',
-                                      'RF1', 'RF2', 'RF2.2', 'RF3', 'RF4', 'RF5', 'EF1', 'EF2', 'EF2.2', 'EF3', 'EF4', 'EF5', 
-                                      'EF6', 'EF7', 'EF8', 'EF9', 'EF10', 'EF11', 'EF12', 'EF13',
-                                      'EF14', 'EF15', 'EF16', 'EF17', 'EF18', 'Class'])
+                                      'Min User Post Count', 'Min User Thread Count', 'Sigma', 'DeltaT'
+                                      'RF1', 'RF2', 'RF2.2', 'RF3', 'RF4', 'RF5', 
+                                      'EF1', 'EF2', 'EF2.2', 'EF3', 'EF4', 'EF5', 'EF6', 'EF7', 'EF8', 'EF9', 'EF10', 'EF11', 'EF12', 'EF13', 'EF14', 'EF15', 'EF16', 'EF17', 'EF18', 
+                                      'OF1', 'OF2', 'OF2.2', 'OF3', 'OF4', 'OF5', 'OF6', 'OF7', 'OF8', 'OF9', 'OF10', 'OF11', 'OF12', 'OF13', 'OF14', 'OF15', 'OF16',
+                                      'TF1', 'TF2', 'TF2.2', 'TF3', 'TF4', 'TF5', 'TF6', 'TF7', 'TF8', 'TF9', 'TF10', 'TF11', 'TF12', 'TF13', 'TF14', 'TF15', 'TF16',
+                                      'Class'])
     return pdf
 
 

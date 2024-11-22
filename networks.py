@@ -12,13 +12,17 @@ from urllib.parse import quote_plus
 
 
 def get_db_connection():
-    password = quote_plus('dw.@2')
-    engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/darkweb_markets_forums')
+    #password = quote_plus('dw.@2')
+    #engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/darkweb_markets_forums')
+    password = 'wapuh717'
+    engine = create_engine(f'postgresql+psycopg2://postgres:{password}@localhost:5432/Viral Cascade')
     return engine.connect()
 
 def get_db_connection_to_upload():
-    password = quote_plus('dw.@2')
-    engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/viral_cascade')
+    #password = quote_plus('dw.@2')
+    #engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/viral_cascade')
+    password = 'wapuh717'
+    engine = create_engine(f'postgresql+psycopg2://postgres:{password}@localhost:5432/Viral Cascade')
     return engine.connect()
 
 def upload_to_database(df, table_name):
@@ -50,6 +54,17 @@ def extract_forum_data(forum_id, min_post_length):
 
     engine.close()
     return df 
+
+def get_roots(df):
+    dict = {}
+    for topic in df['topic_id'].unique():
+        #print(topic)
+        subset = df[df['topic_id']==topic]
+        subset = subset.sort_values(by=['dateadded_post'])
+        #display(subset)
+        #display(subset.iloc[0]['user_id'])
+        dict[topic] = subset.iloc[0]['user_id']
+    return dict
 
 def filter_length(df, min_post_length):
     

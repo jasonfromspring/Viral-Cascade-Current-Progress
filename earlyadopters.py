@@ -10,11 +10,12 @@ from IPython.display import display
 
 
 
-def get_early_adopters(df, forum, alpha, beta):
+def get_early_adopters(df, forum, alpha, beta, roots):
     casc = {}
     noncasc = {}
     timecsc = {}
     timencsc = {}
+    timebcsc = {}
 
     gdf = df[["user_id", "topic_id", "post_id", "dateadded_post"]].sort_values(by=['dateadded_post'])
     '''
@@ -62,43 +63,53 @@ def get_early_adopters(df, forum, alpha, beta):
     
     for t in qdf:
         usrs = gdf[gdf['topic_id'] == t]['user_id'].tolist() # all pos cases
-        tms = gdf[gdf['topic_id'] == t]['dateadded_post'].tolist() # all pos times, need to verify
-        index = 0
-        casc_users = {}
-        lst = []
-        lst2 = []
-        while len(casc_users) < alpha:
-            if usrs[index] not in casc_users.keys(): # if usr != i in list([0])
-                casc_users[usrs[index]] = 1 #tms[index] # first alpha users, with their first time
-                lst.append(usrs[index])
-                lst2.append(tms[index])
-            index += 1
+        true_root = roots[t]
+        if(true_root == usrs[0]):
+            tms = gdf[gdf['topic_id'] == t]['dateadded_post'].tolist() # all pos times, need to verify
+            betaTime = tms[beta-1]
+            index = 0
+            casc_users = {}
+            lst = []
+            lst2 = []
+            while len(casc_users) < alpha:
+                if usrs[index] not in casc_users.keys(): # if usr != i in list([0])
+                    casc_users[usrs[index]] = 1 #tms[index] # first alpha users, with their first time
+                    lst.append(usrs[index])
+                    lst2.append(tms[index])
+                index += 1
 
-        casc[t] = lst
-        timecsc[t] = lst2
+            casc[t] = lst
+            timecsc[t] = lst2
+            timebcsc[t] = betaTime
+        #else:
+        #    print(t)
         #print(f'total in casc is {len(set(usrs))}')
         
 
     for t2 in qdf2:
         usrs2 = gdf[gdf['topic_id'] == t2]['user_id'].tolist()      #[:alpha]
-        tms2 = gdf[gdf['topic_id'] == t2]['dateadded_post'].tolist()  #[:alpha]
-        noncasc_users = {}
-        lst3 = []
-        lst4 = []
-        for z in range(len(usrs2)):
-            if len(noncasc_users) < alpha:
-                if usrs2[z] not in noncasc_users.keys():
-                    noncasc_users[usrs2[z]] = tms2[z] # first alpha users, with their first time
-                    lst3.append(usrs2[z])
-                    lst4.append(tms2[z])
-        
-        noncasc[t2] = lst3
-        timencsc[t2] = lst4
-        #print(f'total in ncasc is {len(set(usrs2))}')
-        #avg.append(len(set(gdf[gdf['topics_id'] == t2]['users_id'].tolist())))
-        #nonsize[t2] = len(set(gdf[gdf['topics_id'] == t2]['users_id'].tolist()))
-        #ns[t2] = list(set(gdf[gdf['topics_id'] == t2]['users_id'].tolist()))
+        true_root = roots[t2]
+        if(true_root == usrs2[0]):
+            tms2 = gdf[gdf['topic_id'] == t2]['dateadded_post'].tolist()  #[:alpha]
+            noncasc_users = {}
+            lst3 = []
+            lst4 = []
+            for z in range(len(usrs2)):
+                if len(noncasc_users) < alpha:
+                    if usrs2[z] not in noncasc_users.keys():
+                        noncasc_users[usrs2[z]] = tms2[z] # first alpha users, with their first time
+                        lst3.append(usrs2[z])
+                        lst4.append(tms2[z])
+            
+            noncasc[t2] = lst3
+            timencsc[t2] = lst4
+            #print(f'total in ncasc is {len(set(usrs2))}')
+            #avg.append(len(set(gdf[gdf['topics_id'] == t2]['users_id'].tolist())))
+            #nonsize[t2] = len(set(gdf[gdf['topics_id'] == t2]['users_id'].tolist()))
+            #ns[t2] = list(set(gdf[gdf['topics_id'] == t2]['users_id'].tolist()))
+        #else:
+        #    print(t2)
     
     del gdf
 
-    return casc, noncasc, timecsc, timencsc
+    return casc, noncasc, timecsc, timencsc, timebcsc
