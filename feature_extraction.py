@@ -251,7 +251,7 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
         
         print(f'Doing Thread {key}')
         print(users)
-        print(f'Progress: {progress_count/len(csc)} of yes cases')
+        print(f'Progress: {progress_count} out of {len(csc)} of yes cases')
         progress_count += 1
 
         alpha_time = tmcsc[key][-1]
@@ -402,13 +402,14 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
                      of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16,
                      tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16, 
                      1]) # topic_id f1, f2, f3, f4... no
-
+        
     print('Doing No Cases')
+    #7813
     progress_count = 1
     for key, users in ncsc.items():
         print(f'Doing Thread {key}')
         print(users)
-        print(f'Progress: {progress_count/len(ncsc)} of no cases')
+        print(f'Progress: {progress_count} out of {len(ncsc)} of no cases')
         progress_count += 1
 
         alpha_time = tmncsc[key][-1]
@@ -478,8 +479,8 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
 
         #ONE HOPS
         if len(one_hop) == 0:
-            of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16 = 0
-            tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16 = 0
+            of1 = of2 = of2_2 = of3 = of4 = of5 = of6 = of7 = of8 = of9 = of10 = of11 = of12 = of13 = of14 = of15 = of16 = 0
+            tf1 = tf2 = tf2_2 = tf3 = tf4 = tf5 = tf6 = tf7 = tf8 = tf9 = tf10 = tf11 = tf12 = tf13 = tf14 = tf15 = tf16 = 0
             two_hop = []
         else:
             #centrality
@@ -509,7 +510,7 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
             of14, of15, of16 = early_f14_15_16(one_hop, two_hop) 
 
         if len(two_hop) == 0:
-            tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16 = 0
+            tf1 = tf2 = tf2_2 = tf3 = tf4 = tf5 = tf6 = tf7 = tf8 = tf9 = tf10 = tf11 = tf12 = tf13 = tf14 = tf15 = tf16 = 0
 
         else:
             #centrality
@@ -545,9 +546,10 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
                      of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16,
                      tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16, 
                      0]) # topic_id f1, f2, f3, f4... no
+        
 
     pdf = pd.DataFrame(data, columns=['Topic', 'Forum', 'Alpha', 'Beta', 'Min Post Content Length',
-                                      'Min User Post Count', 'Min User Thread Count', 'Sigma', 'DeltaT'
+                                      'Min User Post Count', 'Min User Thread Count', 'Sigma', 'DeltaT',
                                       'RF1', 'RF2', 'RF2.2', 'RF3', 'RF4', 'RF5', 
                                       'EF1', 'EF2', 'EF2.2', 'EF3', 'EF4', 'EF5', 'EF6', 'EF7', 'EF8', 'EF9', 'EF10', 'EF11', 'EF12', 'EF13', 'EF14', 'EF15', 'EF16', 'EF17', 'EF18', 
                                       'OF1', 'OF2', 'OF2.2', 'OF3', 'OF4', 'OF5', 'OF6', 'OF7', 'OF8', 'OF9', 'OF10', 'OF11', 'OF12', 'OF13', 'OF14', 'OF15', 'OF16',
