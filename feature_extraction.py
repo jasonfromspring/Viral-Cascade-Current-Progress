@@ -245,10 +245,14 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
     minPosts = filters[4]
     minThreads = filters[5]
 
+    progress_count = 1
     print('Doing Yes Cases')
     for key, users in csc.items():
+        
         print(f'Doing Thread {key}')
         print(users)
+        print(f'Progress: {progress_count/len(csc)} of yes cases')
+        progress_count += 1
 
         alpha_time = tmcsc[key][-1]
         print(alpha_time)
@@ -400,9 +404,13 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
                      1]) # topic_id f1, f2, f3, f4... no
 
     print('Doing No Cases')
+    progress_count = 1
     for key, users in ncsc.items():
         print(f'Doing Thread {key}')
         print(users)
+        print(f'Progress: {progress_count/len(ncsc)} of no cases')
+        progress_count += 1
+
         alpha_time = tmncsc[key][-1]
         print(alpha_time)
         alpha_dataframe = df[df['dateadded_post'] <= alpha_time]
