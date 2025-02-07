@@ -236,7 +236,7 @@ def make_subgraph(G, users):
 
 #get_features(train_threads, train_times, get_net(pkp))
 
-def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
+def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma_sus, sigma_fos, filters):
     data = [] # topic_id f1, f2, f3, f4, yes
     forumNum = filters[0]
     alpha = filters[1]
@@ -260,7 +260,7 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
         #display(alpha_dataframe)
         
         global X
-        X = make_net_from_df(alpha_dataframe, sigma, alpha_time)
+        X = make_net_from_df(alpha_dataframe, sigma_sus, sigma_fos, alpha_time)
         #visualize_network(X)
         global UX
         UX = X.to_undirected()
@@ -288,7 +288,7 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
         global K
         K = nx.core_number(X)
         
-        deltaT = tmbcsc[key] - tmcsc[key][-1]
+        deltaT = tmbcsc[key] - tmcsc[key][0]
         deltaT = round(deltaT.total_seconds()/(60*60*24),2)
 
         root = users[0]
@@ -396,15 +396,15 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
 
 
 
-        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma,deltaT,
+        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma_sus,sigma_fos,deltaT,
                      rf1,rf2,rf2_2,rf3,rf4,rf5, 
                      ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 
                      of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16,
                      tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16, 
                      1]) # topic_id f1, f2, f3, f4... no
+
         
     print('Doing No Cases')
-    #7813
     progress_count = 1
     for key, users in ncsc.items():
         print(f'Doing Thread {key}')
@@ -416,7 +416,7 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
         print(alpha_time)
         alpha_dataframe = df[df['dateadded_post'] <= alpha_time]
         #display(alpha_dataframe)
-        X = make_net_from_df(alpha_dataframe, sigma, alpha_time)
+        X = make_net_from_df(alpha_dataframe, sigma_sus, sigma_fos, alpha_time)
 
         UX = X.to_undirected()
 
@@ -540,21 +540,22 @@ def get_features(csc, ncsc, tmcsc, tmncsc, tmbcsc, df, sigma, filters):
             tf14, tf15, tf16 = early_f14_15_16(two_hop, three_hop) 
 
 
-        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma,deltaT, 
+        data.append([key,forumNum,alpha,beta,minLength,minPosts,minThreads,sigma_sus,sigma_fos,deltaT,
                      rf1,rf2,rf2_2,rf3,rf4,rf5, 
                      ef1,ef2,ef2_2,ef3,ef4,ef5,ef6,ef7,ef8,ef9,ef10,ef11,ef12,ef13,ef14,ef15,ef16,ef17,ef18, 
                      of1, of2, of2_2, of3, of4, of5, of6, of7, of8, of9, of10, of11, of12, of13, of14, of15, of16,
                      tf1, tf2, tf2_2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tf10, tf11, tf12, tf13, tf14, tf15, tf16, 
                      0]) # topic_id f1, f2, f3, f4... no
+
         
 
-    pdf = pd.DataFrame(data, columns=['Topic', 'Forum', 'Alpha', 'Beta', 'Min Post Content Length',
-                                      'Min User Post Count', 'Min User Thread Count', 'Sigma', 'DeltaT',
-                                      'RF1', 'RF2', 'RF2.2', 'RF3', 'RF4', 'RF5', 
-                                      'EF1', 'EF2', 'EF2.2', 'EF3', 'EF4', 'EF5', 'EF6', 'EF7', 'EF8', 'EF9', 'EF10', 'EF11', 'EF12', 'EF13', 'EF14', 'EF15', 'EF16', 'EF17', 'EF18', 
-                                      'OF1', 'OF2', 'OF2.2', 'OF3', 'OF4', 'OF5', 'OF6', 'OF7', 'OF8', 'OF9', 'OF10', 'OF11', 'OF12', 'OF13', 'OF14', 'OF15', 'OF16',
-                                      'TF1', 'TF2', 'TF2.2', 'TF3', 'TF4', 'TF5', 'TF6', 'TF7', 'TF8', 'TF9', 'TF10', 'TF11', 'TF12', 'TF13', 'TF14', 'TF15', 'TF16',
-                                      'Class'])
+    pdf = pd.DataFrame(data, columns=['topic_id', 'forum_id', 'alpha', 'beta', 'min_post_content_length',
+                                      'min_user_post_count', 'min_user_thread_count', 'sigma_sus', 'sigma_fos', 'delta_t',
+                                      'rf1', 'rf2', 'rf2_2', 'rf3', 'rf4', 'rf5',
+                                      'ef1', 'ef2', 'ef2_2', 'ef3', 'ef4', 'ef5', 'ef6', 'ef7', 'ef8', 'ef9', 'ef10', 'ef11', 'ef12', 'ef13', 'ef14', 'ef15', 'ef16', 'ef17', 'ef18',
+                                      'of1', 'of2', 'of2_2', 'of3', 'of4', 'of5', 'of6', 'of7', 'of8', 'of9', 'of10', 'of11', 'of12', 'of13', 'of14', 'of15', 'of16',
+                                      'tf1', 'tf2', 'tf2_2', 'tf3', 'tf4', 'tf5', 'tf6', 'tf7', 'tf8', 'tf9', 'tf10', 'tf11', 'tf12', 'tf13', 'tf14', 'tf15', 'tf16',
+                                      'class_label'])
     return pdf
 
 

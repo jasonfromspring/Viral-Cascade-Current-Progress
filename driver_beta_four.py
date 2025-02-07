@@ -1,7 +1,7 @@
-
 import pandas as pd
 import networkx as nx
-from networks import make_net, make_net_from_df, save_net, get_net, extract_forum_data, show_net, visualize_network, filter_length, filter_users, upload_to_database, get_roots
+from networks import make_net, make_net_from_df, save_net, get_net, extract_forum_data, show_net, visualize_network, \
+    filter_length, filter_users, upload_to_database, get_roots
 from earlyadopters import get_early_adopters
 from feature_extraction import get_features
 from tests import get_avg_time_difference, average_time_everything
@@ -11,31 +11,34 @@ from IPython.display import display
 import datetime as dt
 import community
 
+# alpha_values = [5, 10, 20]
+alpha_values = [5, 10, 20]
 
-#alpha_values = [10, 20, 30, 40, 50]
-alpha_values = [20, 10, 5]
-#beta_multipliers = [2, 3, 4, 5, 10]
-beta_multipliers = [5, 2]
-#content_length_thresholds = [2, 10]
+# beta_multipliers = [2, 3, 4, 5, 10]
+beta_multipliers = [4]
+
+# content_length_thresholds = [10, 2]
 content_length_thresholds = [10, 2]
+
+# min_posts_values = [10, 5]
 min_posts_values = [10, 5]
-#min_threads_values = [2, 5]
-min_threads_values = [5,2]
-#sigmas = [7, 14]
-#sigmas = [14,7]
-sigmas = [[30,14], [14,7]]
-#forums = [4,8,2,9,11]
-forums = [8,2,9,11]
+
+# min_threads_values = [5, 2]
+min_threads_values = [5, 2]
+
+# sigmas = [[30, 14], [14, 7]]
+sigmas = [[14, 7]]
+
+# forums = [4, 8, 2, 9, 11]
+forums = [8, 2, 9, 11]
+
 deltaT = [30, 60, 90]
 
-#4, 20, 200, 10, 5, 2, 14, 7,
+# 4, 20, 200, 10, 5, 2, 14, 7,
 
-#temporary:
-beta_multipliers = [5, 2]
-min_posts_values = [5]
-min_threads_values = [2]
-#4, 20, 200, 10, 5, 2, 14-7
-#4, 20, 100, 10, 5, 2, 30-14
+# temporary:
+# 4, 20, 200, 10, 5, 2, 14-7
+# 4, 20, 100, 10, 5, 2, 30-14
 
 """
 alpha_values = [10]
@@ -60,7 +63,7 @@ for forum in forums:
 
             for minThreads in min_threads_values:
                 print(f'User thread minimum: {minThreads}')
-                
+
                 forum_df = extract_forum_data(forum, minLength)
                 root_users = get_roots(forum_df)
                 df = filter_length(forum_df, minLength)
@@ -71,22 +74,19 @@ for forum in forums:
                     print(f'\nDoing alpha {alpha}')
 
                     for m in beta_multipliers:
-                        print(f'Beta multiplier {m}, beta = {alpha*m}')
+                        print(f'Beta multiplier {m}, beta = {alpha * m}')
 
-                        csc, ncsc, tcsc, tncsc, tbcsc = get_early_adopters(df, forum, alpha, alpha*m, root_users)
-                        if len(csc)==0:
+                        csc, ncsc, tcsc, tncsc, tbcsc = get_early_adopters(df, forum, alpha, alpha * m, root_users)
+                        if len(csc) == 0:
                             continue
                         for sigma_sus, sigma_fos in sigmas:
                             print(f"Sigmas = {sigma_sus}, {sigma_fos}\n")
-                            filters = [forum, alpha, alpha*m, minLength, minPosts, minThreads]
+                            filters = [forum, alpha, alpha * m, minLength, minPosts, minThreads]
                             results = get_features(csc, ncsc, tcsc, tncsc, tbcsc, df, sigma_sus, sigma_fos, filters)
-                            #results.to_csv(f'Forum{forum}data_{m}x.csv', header = True, index = False)
+                            # results.to_csv(f'Forum{forum}data_{m}x.csv', header = True, index = False)
                             upload_to_database(results, 'all_features')
                             del results
-
-                    #beta_multipliers = [5, 2]
-
-                #alpha_values = [20, 10, 5]
+                        sigmas = [[30, 14], [14, 7]]
 
             #min_threads_values = [5, 2]
 
@@ -94,10 +94,6 @@ for forum in forums:
 
     #content_length_thresholds = [10, 2]
 
-                #sigmas = [7, 14, 30]
-
-                    #beta_multipliers = [2, 3, 4, 5, 10]
-                    
 '''
 for alpha in alpha_values:
     print(f'\nDoing alpha {alpha}')
@@ -114,7 +110,7 @@ for alpha in alpha_values:
                         for forum in forums:
                             print(f'Doing Forum {forum}')
 
-                            
+
                             df = extract_forum_data(forum, minLength)
                             df = filter_length(df, minLength)
                             df = filter_users(df, minPosts, minThreads)
@@ -130,14 +126,14 @@ for alpha in alpha_values:
                             #pkp = f'pickleX{forum}.p'        
                             #net = make_net_from_df(df, 7)
                             #pkp = save_net(net, forum)
-                            
+
                             #visualize_network(net, forum)
 
                             #show_net(pkp, forum)        
 
                             # run query to retrieve topics id's where above > size and > size/2
                             csc, ncsc, tcsc, tncsc = get_early_adopters(df, forum, alpha, alpha*m) # set threshold here    
-                            
+
                             # Prepare sets
                             #split = 0.8 # not over 1
                             #train_threads, train_times, test_threads, test_times = prepare(csc, ncsc, tcsc, tncsc, split, 2) # 1 = both balanced; 2 = train balanced, test imbalanced; 3 = both imbalanced

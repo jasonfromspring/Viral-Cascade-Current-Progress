@@ -12,17 +12,17 @@ from urllib.parse import quote_plus
 
 
 def get_db_connection():
-    #password = quote_plus('dw.@2')
-    #engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/darkweb_markets_forums')
-    password = 'wapuh717'
-    engine = create_engine(f'postgresql+psycopg2://postgres:{password}@localhost:5432/Viral Cascade')
+    password = quote_plus('dw.@2')
+    engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/darkweb_markets_forums')
+    #password = 'wapuh717'
+    #engine = create_engine(f'postgresql+psycopg2://postgres:{password}@localhost:5432/Viral Cascade')
     return engine.connect()
 
 def get_db_connection_to_upload():
-    #password = quote_plus('dw.@2')
-    #engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/viral_cascade')
-    password = 'wapuh717'
-    engine = create_engine(f'postgresql+psycopg2://postgres:{password}@localhost:5432/Viral Cascade')
+    password = quote_plus('dw.@2')
+    engine = create_engine(f'postgresql://postgres:{password}@localhost:5432/viral_cascade')
+    #password = 'wapuh717'
+    #engine = create_engine(f'postgresql+psycopg2://postgres:{password}@localhost:5432/Viral Cascade')
     return engine.connect()
 
 def upload_to_database(df, table_name):
@@ -149,7 +149,7 @@ def make_net(forum):
                         X.add_edge(users[i], users[j], weight=1)
     return X
 
-def make_net_from_df(user_data, sigma, alpha_time):
+def make_net_from_df(user_data, sigma, sigma_alpha, alpha_time):
     
     X = nx.DiGraph()
     #for topic_id, group in user_data.groupby('topic_id'):
@@ -192,7 +192,7 @@ def make_net_from_df(user_data, sigma, alpha_time):
 
                 delta_t_AV = (alpha_time - times[j]).total_seconds() / (24 * 60 * 60)
                 if users[i] != users[j]:
-                    value = round(math.e**((-(delta_t_VU))/sigma) * math.e**((-(delta_t_AV))/sigma), 2)
+                    value = round(math.e**((-(delta_t_VU))/sigma) * math.e**((-(delta_t_AV))/sigma_alpha), 2)
                     #if value != 0:
                     #    print(value)
                     if X.has_edge(users[i], users[j]):
