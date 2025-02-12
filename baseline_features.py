@@ -179,10 +179,15 @@ def check_combination_exists(pk_values, x):
         return result is None  # Returns True if row does not exists, else False
 
 if __name__ == "__main__":
-    alpha_values = [20, 10, 5]
-    beta_multipliers = [5,4,3,2]
-    content_length_thresholds = [10, 2]
-    min_posts_values = [10, 5]
+    #alpha_values = [20, 10, 5]
+    alpha_values = [10, 5]
+    #beta_multipliers = [5,4,3,2]
+    beta_multipliers = [2]
+    #content_length_thresholds = [10, 2]
+    content_length_thresholds = [2]
+    #min_posts_values = [10, 5]
+    min_posts_values = [5]
+
     min_threads_values = [5, 2]
     forums = [4, 8, 2, 9, 11]
     lambda_time = 24
@@ -221,10 +226,10 @@ if __name__ == "__main__":
                             upload_to_database(cascade_features, 'baseline_features')
                             print("Features saved")
                             del cascade_features
-    forum_id = 4
-    min_post_length = 10
-    min_posts_per_user = 5
-    min_threads_per_user = 2
-    classification_threshold = 0.5
-    alpha = 10
-    beta = 40  # 4x = viral
+                        beta_multipliers = [5, 4, 3, 2]
+
+                    alpha_values = [20, 10, 5]
+
+            min_posts_values = [10, 5]
+
+        content_length_thresholds = [10, 2]
